@@ -23,9 +23,7 @@ from tensorflow.keras.datasets import mnist
 from google.colab import drive
 drive.mount('/content/drive')
 
-###############################################################################
-# 1) Data Loading and Preprocessing
-###############################################################################
+# Data Loading and Preprocessing
 def preprocess_data():
     (train_images, train_labels), (test_images, test_labels) = mnist.load_data()
     train_images = train_images.astype('float32') / 255.0
@@ -39,9 +37,7 @@ def preprocess_data():
     test_labels  = tf.one_hot(test_labels,  depth=10)
     return train_images, train_labels, test_images, test_labels
 
-###############################################################################
-# 2) Single "No Hidden Layer" class
-###############################################################################
+# Single "No Hidden Layer" class
 class CustomDenseLayer(tf.keras.layers.Layer):
     def __init__(self, input_dim=784, output_dim=10):
         super(CustomDenseLayer, self).__init__()
@@ -78,9 +74,7 @@ class CustomDenseLayer(tf.keras.layers.Layer):
         gen_logits = tf.matmul(labels, tf.transpose(self.weight)) + self.inverse_bias
         return gen_logits
 
-###############################################################################
-# 3) Instantiate Our Single Layer
-###############################################################################
+# Instantiate Our Single Layer
 single_layer = CustomDenseLayer(input_dim=784, output_dim=10)
 
 def classification(images):
@@ -96,9 +90,9 @@ def generator(labels):
     """
     return single_layer.backward_pass(labels)
 
-###############################################################################
-# 5) FGSM Attack for Adversarial Examples
-###############################################################################
+
+# FGSM Attack for Adversarial Examples
+
 def fgsm_attack(images, labels, epsilon=0.1):
     with tf.GradientTape() as tape:
         tape.watch(images)
@@ -111,9 +105,8 @@ def fgsm_attack(images, labels, epsilon=0.1):
     adv_images   = tf.clip_by_value(adv_images, 0.0, 1.0)
     return adv_images
 
-###############################################################################
-# 6) Accuracy / Loss Helpers
-###############################################################################
+
+# Accuracy / Loss Helpers
 def compute_accuracy(images, labels):
     logits = classification(images)
     preds  = tf.argmax(logits, axis=1)
@@ -155,22 +148,22 @@ def compute_r_sigmoid_and_r_softmax(images):
     r_softmax = tf.reduce_max(y_soft)
     return r_sigmoid.numpy(), r_softmax.numpy()
 
-###############################################################################
-# 6) SEPARATE UPDATES: c_vars, g_vars
-###############################################################################
+
+# SEPARATE UPDATES: c_vars, g_vars
+
 # Paper code often uses:
 # c_vars = [C_W1, C_B1] and g_vars = [C_W1, G_B1]
 # so that classifier updates won't affect G_B1, and generator updates won't affect C_B1.
-###############################################################################
+
 def get_classifier_vars():
     return [single_layer.weight, single_layer.bias]
 
 def get_generator_vars():
     return [single_layer.weight, single_layer.inverse_bias]
 
-###############################################################################
-# 4) Training Step (Classifier + Generator)
-###############################################################################
+
+# Training Step (Classifier + Generator)
+
 def train_step(batch_x, batch_y, c_optimizer, g_optimizer):
     """
     1) Classifier update (c_vars only)
@@ -424,18 +417,18 @@ test_labels  = test_labels.astype('int32')
 print("train_images shape:", train_images.shape)  # e.g. (60000, 784)
 print("train_labels shape:", train_labels.shape)  # e.g. (60000,)
 
-##########################
-# 2) Slice first 500
-##########################
+
+Slice first 500
+
 train_images_subset = train_images[:500]          # shape (500, 784)
 train_labels_subset = train_labels[:500]          # shape (500,)
 
 print("train_images_subset shape:", train_images_subset.shape)
 print("train_labels_subset shape:", train_labels_subset.shape)
 
-##########################
-# 3) Possibly filter classes [0,1,2]
-##########################
+
+# Possibly filter classes [0,1,2]
+
 import numpy as np
 
 selected_classes = [0, 1, 2]
@@ -447,17 +440,17 @@ filtered_labels = train_labels_subset[indices]      # shape (X,)
 print("filtered_images shape:", filtered_images.shape)
 print("filtered_labels shape:", filtered_labels.shape)
 
-##########################
-# 4) PCA
-##########################
+
+# PCA
+
 from sklearn.decomposition import PCA
 
 pca = PCA(n_components=2)
 filtered_images_2D = pca.fit_transform(filtered_images)
 
-##########################
-# 5) Classifier Logic
-##########################
+
+# lassifier Logic
+
 from sklearn.metrics import accuracy_score
 from sklearn.inspection import DecisionBoundaryDisplay
 from sklearn.neighbors import KNeighborsClassifier
